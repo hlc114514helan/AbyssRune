@@ -11,6 +11,12 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="start-screen" class="minimal-menu-overlay">
+    <button class="minimal-start-btn" onclick="handleStartGame()">開始遊戲</button>
+</div>
+<audio id="audio-menu" src="menu.mp3" loop style="display:none;"></audio>
+<audio id="audio-battle" src="battle.mp3" loop style="display:none;"></audio>
+<audio id="audio-victory" src="victory.mp3" style="display:none;"></audio>
 <div class="wrap">
 <div class="panel">
 <h2>🧍 英雄</h2>
@@ -44,6 +50,13 @@
 <button class="btn" onclick="openDrawModal()">✨ 抽卡</button>
 <button class="btn" onclick="openBlackMarket()">💰 奸商</button>
 <button class="btn" onclick="openWheelModal()">🎡 幸運轉盤</button>
+</div>
+<div class="audio-controls" style="margin-bottom: 16px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #5f4632; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+    <button id="muteBtn" class="btn" style="margin: 0; padding: 4px 12px; font-size: 13px; min-width: 90px;" onclick="AudioManager.toggleMute()">🔊 音效：開</button>
+    <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
+        <span style="font-size: 12px; color: #f5e6c8; white-space: nowrap;">音量：</span>
+        <input id="volumeSlider" type="range" min="0" max="1" step="0.05" value="0.5" style="width: 100%; cursor: pointer;" oninput="AudioManager.setVolume(this.value)">
+    </div>
 </div>
 <h3>🧿 遺物</h3>
 <div id="relics"></div>
