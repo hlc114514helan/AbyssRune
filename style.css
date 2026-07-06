@@ -569,3 +569,58 @@ body::before{
 
   z-index:999;
 }
+/* ======================================================= */
+/* 🌌 《深淵符文》專屬開場畫面（完美融合生圖主視覺）       */
+/* ======================================================= */
+.minimal-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    
+    /* 🎯 核心修改：載入你極具氛圍的全新 start_bg.png 背景圖 */
+    background: url('start_bg.png') no-repeat center center;
+    background-size: cover;       
+    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;                
+    transition: opacity 0.5s ease-in-out;
+    overflow: hidden;
+}
+
+/* 當玩家點擊按鈕，開場畫面平滑淡出 */
+.minimal-menu-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* 🎮 隱形點擊按鈕：完美套用在圖片原本的「開始遊戲」金色方框位置 */
+.minimal-start-btn {
+    /* 調整按鈕大小以完美覆蓋圖片中的金框區域 */
+    width: 400px;
+    height: 100px;
+    
+    /* 移至畫面中下段，對齊圖片中按鈕的視覺位置 */
+    margin-top: 300px; 
+    
+    /* 隱藏原生按鈕外觀，呈現完全透明 */
+    background: transparent;
+    border: none;
+    color: transparent; 
+    cursor: pointer;
+    outline: none;
+    
+    /* 讓滑鼠移上去時有淡淡的深淵藍光擴散回饋 */
+    border-radius: 8px;
+    box-shadow: 0 0 0px rgba(45, 200, 255, 0);
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+
+/* 按下按鈕時的瞬間縮放回饋 */
+.minimal-start-btn:active {
+    transform: scale(0.98);
+}
