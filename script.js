@@ -1,10 +1,115 @@
+// ==========================================
+// 音效管理器 (Audio Manager) - 核心實作
+// ==========================================
+const AudioManager = {
+    bgm: null,
+    currentTrack: '',
+    // 從瀏覽器快取讀取先前的設定，若無則預設不靜音、音量 0.5
+    isMuted: localStorage.getItem('game_muted') === 'true',
+    volume: localStorage.getItem('game_volume') !== null ? parseFloat(localStorage.getItem('game_volume')) : 0.5,
+
+    // 音訊檔案對照表 (確保路徑與你的實體檔案位置一致)
+    tracks: {
+        menu: 'menu.mp3',
+        battle: 'battle.mp3',
+        victory: 'victory.mp3'
+    },
+
+    // 初始化狀態
+    init() {
+        this.updateUI();
+        
+        // 當玩家第一次點擊畫面的任何地方時，嘗試自動啟動主選單音樂（破解瀏覽器自動播放限制）
+        const unlockAutoplay = () => {
+            if (!this.bgm) {
+                this.playBGM('menu');
+            }
+            document.removeEventListener('click', unlockAutoplay);
+        };
+        document.addEventListener('click', unlockAutoplay);
+    },
+
+    // 切換背景音樂歌曲
+    playBGM(trackKey) {
+        const src = this.tracks[trackKey];
+        if (!src) return;
+
+        // 如果目前正在播放同一首歌，就不重複觸發
+        if (this.currentTrack === trackKey && this.bgm && !this.bgm.paused) {
+            return;
+        }
+
+        // 停止並清除舊的背景音樂
+        this.stopBGM();
+
+        this.currentTrack = trackKey;
+        this.bgm = new Audio(src);
+        this.bgm.loop = (trackKey !== 'victory'); // 如果不是 victory 就循環播放，是 victory 就不循環
+        this.bgm.volume = this.isMuted ? 0 : this.volume;
+
+        // 執行播放
+        this.bgm.play().catch(err => {
+            console.log("預期行為：等待玩家點擊畫面後即刻啟動音訊。");
+        });
+    },
+
+    // 停止目前音樂
+    stopBGM() {
+        if (this.bgm) {
+            this.bgm.pause();
+            this.bgm = null;
+        }
+    },
+
+    // 調整音量大小
+    setVolume(val) {
+        this.volume = parseFloat(val);
+        localStorage.setItem('game_volume', this.volume);
+        
+        if (this.bgm && !this.isMuted) {
+            this.bgm.volume = this.volume;
+        }
+    },
+
+    // 切換開關靜音
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        localStorage.setItem('game_muted', this.isMuted);
+        
+        if (this.bgm) {
+            this.bgm.volume = this.isMuted ? 0 : this.volume;
+        }
+        this.updateUI();
+    },
+
+    // 同步更新前端按鈕與拉桿的視覺狀態
+    updateUI() {
+        const muteBtn = document.getElementById('muteBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        
+        if (muteBtn) {
+            muteBtn.innerText = this.isMuted ? "🔇 音效：關" : "🔊 音效：開";
+            muteBtn.style.background = this.isMuted ? "#553333" : "";
+        }
+        if (volumeSlider) {
+            volumeSlider.value = this.isMuted ? 0 : this.volume;
+        }
+    }
+};
+
+// 確保網頁 DOM 載入完畢後立刻初始化音效設定
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => AudioManager.init());
+} else {
+    AudioManager.init();
+}
 // ================= 完整遊戲資料庫 =================
 const baseCardPool = [ {name:"打擊",type:"atk",dmg:6,cost:1,rarity:"common",desc:"造成6傷害"},{name:"防禦",type:"block",block:6,cost:1,rarity:"common",desc:"獲得6護甲"},{name:"集中",type:"energy",gain:1,draw:1,cost:0,rarity:"rare",once:true,desc:"+1能量 抽1張"},{name:"毒刃",type:"poison",dmg:5,poison:6,cost:1,rarity:"rare",desc:"造成5傷害並施加6中毒"},];
 const existingExtraCardPool = [ {name:"重擊",type:"atk",dmg:14,cost:2,rarity:"rare",desc:"造成14傷害"},{name:"雙連擊",type:"multi",hits:2,dmg:5,cost:1,rarity:"rare",desc:"攻擊2次"},{name:"鐵壁",type:"block",block:16,cost:2,rarity:"rare",desc:"獲得16護甲"},{name:"破甲",type:"vul",vulnerable:2,cost:1,rarity:"epic",desc:"施加2層易傷"},{name:"狂怒",type:"buff",strength:2,cost:1,rarity:"epic",desc:"獲得2力量"},{name:"風暴斬",type:"multi",hits:4,dmg:4,cost:2,rarity:"epic",desc:"攻擊4次"},{name:"終焉",type:"atk",dmg:36,cost:3,rarity:"legend",desc:"造成36傷害"}];
 const drawOnlyCardPool = [ {name:"連擊",type:"multi",hits:3,dmg:3,cost:1,rarity:"common",desc:"造成3傷害3次",price:45},{name:"戰意",type:"buff",strength:2,cost:1,rarity:"common",desc:"獲得2力量",price:50},{name:"毒爆",type:"poisonburst",cost:2,rarity:"rare",desc:"引爆所有中毒",price:55},{name:"終焉斬",type:"atk",dmg:40,cost:4,rarity:"epic",desc:"造成40傷害",price:60},{name:"時空扭曲",type:"energy",gain:3,draw:2,cost:0,rarity:"epic",desc:"+3能量並抽2張",price:80},{name:"深淵降臨",type:"percentdmg",percent:0.5,cost:5,rarity:"legend",desc:"造成敵人50%最大生命傷害",price:95},{name:"無限輪迴",type:"fullheal",cost:3,rarity:"legend",desc:"回滿生命並抽滿手牌",price:130},{name:"治癒術",type:"heal",heal:8,cost:1,rarity:"common",desc:"恢復8生命",price:35},{name:"盾擊",type:"atkblock",dmg:8,block:8,cost:1,rarity:"common",desc:"造成8傷害並獲得8護甲",price:40},{name:"吸血斬",type:"lifesteal",dmg:12,heal:6,cost:2,rarity:"rare",desc:"造成12傷害並恢復6生命",price:60},{name:"狂暴",type:"buff",strength:5,cost:2,rarity:"epic",desc:"獲得5力量",price:70},{name:"風暴連斬",type:"multi",hits:6,dmg:4,cost:3,rarity:"epic",desc:"攻擊6次",price:80},{name:"神之怒",type:"atk",dmg:100,cost:6,rarity:"legend",desc:"造成100傷害",price:85},{name:"滅世風暴",type:"multi",hits:10,dmg:8,cost:5,rarity:"legend",desc:"攻擊10次",price:120},{name:"聖光治療",type:"heal",heal:20,cost:2,rarity:"rare",desc:"恢復20生命",price:60},{name:"生命虹吸",type:"lifesteal",dmg:20,heal:10,cost:3,rarity:"epic",desc:"造成20傷害並恢復10生命",price:80},{name:"暴風劍雨",type:"multi",hits:12,dmg:5,cost:5,rarity:"legend",desc:"攻擊12次",price:140},{name:"審判之劍",type:"atk",dmg:150,cost:8,rarity:"legend",desc:"造成150傷害",price:160},{name:"奇蹟恢復",type:"fullheal",cost:4,rarity:"legend",desc:"完全恢復生命",price:180},{name:"超載魔力",type:"energy",gain:5,draw:3,cost:0,rarity:"legend",desc:"+5能量並抽3張",price:170}];
 const curseCardPool = [ { name:"疲勞詛咒", type:"curse", cost:0, rarity:"curse", desc:"每回合抽牌數 -1", effect:()=>{ state.drawReduce = (state.drawReduce || 0) + 1; log("😫 疲勞詛咒：每回合抽牌數 -1"); }, once:true }, { name:"脆弱詛咒", type:"curse", cost:0, rarity:"curse", desc:"每回合開始時受到 3 傷害", effect:()=>{ state.curseDamage = (state.curseDamage || 0) + 3; log("💔 脆弱詛咒：每回合受到 3 傷害"); }, once:true }, { name:"貪婪詛咒", type:"curse", cost:0, rarity:"curse", desc:"商店價格 +20%", effect:()=>{ state.shopDiscount = (state.shopDiscount || 1) * 1.2; log("💰 貪婪詛咒：商店價格 +20%"); }, once:true } ];
 const hiddenCardPool = { paladin: [{name:"制裁",type:"atk",dmg:75,cost:3,rarity:"legend",desc:"造成75傷害並施加20易傷", vulnerable:20},{name:"聖光術",type:"heal",heal:60,cost:2,rarity:"legend",desc:"恢復60生命"}], ranger: [{name:"連射",type:"multi",hits:2,dmg:35,cost:2,rarity:"legend",desc:"造成35傷害2次"},{name:"陷阱",type:"debuff",cost:3,rarity:"legend",desc:"敵人下回合攻擊 -50%", effect:()=>{ if(state.enemy) state.enemy.nextTurnAtkMod = 0.5; log("🗡️ 陷阱生效，下回合敵人攻擊減半"); }}], vampire: [{name:"緋紅之噬",type:"lifesteal",dmg:80,heal:30,cost:3,rarity:"legend",desc:"造成80傷害並恢復30生命"},{name:"紅蓮解體",type:"atk",dmg:300,cost:9,rarity:"legend",desc:"造成300傷害"}] };
-const relicPool = [ {name:"尖刺護甲",desc:"被攻擊時反傷20%",rarity:"common",weight:8,effect:(type,dmg)=>{if(type==="hit"&&state.enemy){let thorns=Math.max(1,Math.floor(dmg*0.2));state.enemy.hp-=thorns;log(`🩸 尖刺護甲反傷 ${thorns}`);}}}, {name:"遠古卷軸",desc:"每回合額外抽1張牌",rarity:"common",weight:8,turnStart:()=>draw(1)}, {name:"力量護符",desc:"永久獲得2力量",rarity:"common",weight:8,onGet:()=>{state.strength+=2;log("💪 力量護符 +2 力量");}}, {name:"生命水晶",desc:"最大生命+10",rarity:"common",weight:8,onGet:()=>{state.maxHp+=10;state.hp+=10;log("❤️ 最大生命 +10");}}, {name:"魔力核心",desc:"最大能量 +1",rarity:"rare",weight:3,onGet:()=>{state.maxEnergy++; log("✨ 最大能量 +1");},battleStart:()=>{}}, {name:"鮮血戒指",desc:"攻擊後恢復10生命",rarity:"rare",weight:3,effect:(type)=>{if(type==="attack"){heal(10);}}}, {name:"毒蛇雕像",desc:"每回合開始時對敵人施加30中毒",rarity:"rare",weight:3,turnStart:()=>{if(state.enemy){state.enemy.poison+=30;log("🐍 毒蛇雕像施加30中毒");}}}, {name:"幸運幣",desc:"商店價格降低10%",rarity:"rare",weight:3,onGet:()=>{state.shopDiscount=0.9;log("💰 商店價格 -10%");}}, {name:"龍心",desc:"最大生命+25",rarity:"epic",weight:1,onGet:()=>{state.maxHp+=25;state.hp+=25;log("❤️ 龍心 +25 最大生命");}}, {name:"風暴披風",desc:"每回合開始時獲得20護甲",rarity:"epic",weight:1,turnStart:()=>{state.block+=20;log("🌬️ 風暴披風 +20 護甲");}}, {name:"時間沙漏",desc:"每場戰鬥首回合 +2 能量",rarity:"epic",weight:1,battleStart:()=>{state.firstTurnBonusEnergy = (state.firstTurnBonusEnergy||0)+2;log("⏳ 首回合額外 +2 能量");}}, {name:"巨龍之心",desc:"每回合開始獲得 20 力量（戰鬥內）",rarity:"epic",weight:1,turnStart:()=>{state.tempStrength = (state.tempStrength||0)+20; log("🐉 巨龍之心：本回合力量 +20");}}, {name:"刺客斗篷",desc:"暴擊傷害提升至 2 倍",rarity:"epic",weight:1,onGet:()=>{state.critBonusMult=2; log("🗡️ 刺客斗篷：暴擊傷害變為 2 倍");}}, {name:"法師之眼",desc:"每回合額外抽 1 張牌（限一次）",rarity:"epic",weight:1,turnStart:()=>{state.extraDrawUsed=false; log("👁️ 法師之眼：本回合可額外抽一張牌");}}, {name:"聖騎士徽章",desc:"每回合開始時恢復 30 生命",rarity:"epic",weight:1,turnStart:()=>{heal(30); log("🛡️ 聖騎士徽章：恢復 30 生命");}}, {name:"吸血鬼之牙",desc:"吸血比例 +10%",rarity:"epic",weight:1,onGet:()=>{state.vampireHealBonus=(state.vampireHealBonus||0)+0.1; log("🦇 吸血鬼之牙：吸血比例增加 10%");}} ];
+const relicPool = [ {name:"尖刺護甲",desc:"被攻擊時反傷20%",rarity:"common",weight:8,effect:(type,dmg)=>{if(type==="hit"&&state.enemy){let thorns=Math.max(1,Math.floor(dmg*0.2));state.enemy.hp-=thorns;log(`🩸 尖刺護甲反傷 ${thorns}`);}}}, {name:"遠古卷軸",desc:"每回合額外抽1張牌",rarity:"common",weight:8,turnStart:()=>draw(1)}, {name:"力量護符",desc:"永久獲得20力量",rarity:"common",weight:8,onGet:()=>{state.strength+=20;log("💪 力量護符 +20 力量");}}, {name:"生命水晶",desc:"最大生命+10",rarity:"common",weight:8,onGet:()=>{state.maxHp+=10;state.hp+=10;log("❤️ 最大生命 +10");}}, {name:"魔力核心",desc:"最大能量 +1",rarity:"rare",weight:3,onGet:()=>{state.maxEnergy++; log("✨ 最大能量 +1");},battleStart:()=>{}}, {name:"鮮血戒指",desc:"攻擊後恢復10生命",rarity:"rare",weight:3,effect:(type)=>{if(type==="attack"){heal(10);}}}, {name:"毒蛇雕像",desc:"每回合開始時對敵人施加30中毒",rarity:"rare",weight:3,turnStart:()=>{if(state.enemy){state.enemy.poison+=30;log("🐍 毒蛇雕像施加30中毒");}}}, {name:"幸運幣",desc:"商店價格降低10%",rarity:"rare",weight:3,onGet:()=>{state.shopDiscount=0.9;log("💰 商店價格 -10%");}}, {name:"龍心",desc:"最大生命+25",rarity:"epic",weight:1,onGet:()=>{state.maxHp+=25;state.hp+=25;log("❤️ 龍心 +25 最大生命");}}, {name:"風暴披風",desc:"每回合開始時獲得20護甲",rarity:"epic",weight:1,turnStart:()=>{state.block+=20;log("🌬️ 風暴披風 +20 護甲");}}, {name:"時間沙漏",desc:"每場戰鬥首回合 +2 能量",rarity:"epic",weight:1,battleStart:()=>{state.firstTurnBonusEnergy = (state.firstTurnBonusEnergy||0)+2;log("⏳ 首回合額外 +2 能量");}}, {name:"巨龍之心",desc:"每回合開始獲得 20 力量（戰鬥內）",rarity:"epic",weight:1,turnStart:()=>{state.tempStrength = (state.tempStrength||0)+20; log("🐉 巨龍之心：本回合力量 +20");}}, {name:"刺客斗篷",desc:"暴擊傷害提升至 2 倍",rarity:"epic",weight:1,onGet:()=>{state.critBonusMult=2; log("🗡️ 刺客斗篷：暴擊傷害變為 2 倍");}}, {name:"法師之眼",desc:"每回合額外抽 1 張牌（限一次）",rarity:"epic",weight:1,turnStart:()=>{state.extraDrawUsed=false; log("👁️ 法師之眼：本回合可額外抽一張牌");}}, {name:"聖騎士徽章",desc:"每回合開始時恢復 30 生命",rarity:"epic",weight:1,turnStart:()=>{heal(30); log("🛡️ 聖騎士徽章：恢復 30 生命");}}, {name:"吸血鬼之牙",desc:"吸血比例 +10%",rarity:"epic",weight:1,onGet:()=>{state.vampireHealBonus=(state.vampireHealBonus||0)+0.1; log("🦇 吸血鬼之牙：吸血比例增加 10%");}} ];
 
 // ========= 稀有度裝備系統 =========
 const RARITY = { common:0, rare:1, epic:2, legend:3 };
@@ -152,6 +257,9 @@ function applyEvolution(){ let {baseHp, baseEnergy}=getBaseJobStats(); if(state.
 function setJob(job,keepProgress=false){ if(!keepProgress && state.gameStarted && !(job==="paladin"||job==="ranger"||job==="vampire")){ log("❌ 遊戲已開始，無法更換基礎職業！"); return; } state.job=job; if(!keepProgress){ state.evolved=false; state.evolutionPoints=0; state.permanentStrength=0; state.strength=0; state.relics=[]; state.unlockedCardNames=[]; state.shopDiscount=1; let {baseHp,baseEnergy}=getBaseJobStats(); state.maxHp=baseHp; state.maxEnergy=baseEnergy; state.hp=state.maxHp; state.energy=state.maxEnergy; state.block=0; state.poison=0; state.deck=getInitialDeck(); state.hand=[]; state.discard=[]; state.drawReduce=0; state.curseDamage=0; state.equipmentUnlocked=false; state.equipment={ weapon: null, armor: null, pants: null, boots: null }; state.blackMarketCards=null; state.shopCards=null; }else{ let {baseHp,baseEnergy}=getBaseJobStats(); state.maxHp=Math.max(state.maxHp,baseHp); state.maxEnergy=Math.max(state.maxEnergy,baseEnergy); state.hp=Math.min(state.hp,state.maxHp); state.energy=Math.min(state.energy,state.maxEnergy); let newCards=[]; if(job==="paladin") newCards=hiddenCardPool.paladin; else if(job==="ranger") newCards=hiddenCardPool.ranger; else if(job==="vampire") newCards=hiddenCardPool.vampire; for(let card of newCards) if(!state.deck.some(c=>c.name===card.name)) state.deck.push(copyCard(card)); state.rangerFirstAttackFree=false; } generateMap(); render(); log(`🎭 切換職業：${job}${keepProgress?"（保留進度）":""}`); }
 function generateMap(){ let map = [ {type:"戰鬥",done:false},{type:"戰鬥",done:false},{type:"精英",done:false},{type:"商店",done:false}, {type:Math.random()<0.5?"休息":"寶箱",done:false},{type:Math.random()<0.5?"休息":"寶箱",done:false} ]; let eventIndex = Math.floor(Math.random() * 2); map[eventIndex] = {type:"事件", done:false}; if(Math.random() < 0.2 && map[1].type === "戰鬥") map[1] = {type:"事件", done:false}; if(state.floor % 5 === 0){ let bossIdx = Math.floor(Math.random() * map.length); map[bossIdx] = {type:"Boss", done:false}; } state.map = shuffle(map); state.blackMarketCards = null; state.shopCards = null; }
 function spawnEnemy(rank){
+    // 🎵 【音效觸發】切換至戰鬥音樂
+    if (typeof AudioManager !== 'undefined') AudioManager.playBGM('battle');
+
     state.inBattle = true;
     let hp = 40 + state.floor * 8, atk = 6 + state.floor;
     if(rank === "elite"){ hp *= 1.8; atk *= 1.5; }
@@ -217,12 +325,115 @@ function dealDamage(dmg){ let isCrit=false; if(state.job==="assassin" && Math.ra
 function playCard(i){ if(!state.enemy) return; let card=state.hand[i]; if(!card) return; let energyCost=card.cost; if(state.job==="ranger" && card.type==="atk" && !state.rangerFirstAttackFree){ energyCost=0; state.rangerFirstAttackFree=true; log("🏹 遊俠被動：首次攻擊不消耗能量"); } if(state.energy<energyCost){ log("⚡ 能量不足"); return; } if(card.once && state.usedOnceCards.includes(card.name)){ log("❌ 此卡本回合已使用"); return; } state.energy-=energyCost; state.hand.splice(i,1); if(card.once) state.usedOnceCards.push(card.name); switch(card.type){ case "atk": let atkDmg=card.dmg+state.strength+state.tempStrength; dealDamage(atkDmg); if(card.vulnerable) state.enemy.vulnerable+=card.vulnerable; break; case "block": state.block+=card.block; log(`🛡️ 獲得 ${card.block} 護甲`); break; case "poison": let poisonDmg=card.dmg+state.strength+state.tempStrength; dealDamage(poisonDmg); state.enemy.poison+=card.poison; log(`☠️ 敵人中毒 ${card.poison}`); break; case "multi": let multiBase=card.dmg+state.strength+state.tempStrength; for(let x=0;x<card.hits;x++) dealDamage(multiBase); break; case "energy": state.energy+=card.gain; draw(card.draw); log(`⚡ +${card.gain} 能量`); break; case "vul": state.enemy.vulnerable+=card.vulnerable; log(`💥 敵人易傷 ${card.vulnerable}`); break; case "buff": state.strength+=card.strength; log(`💪 力量 +${card.strength}`); break; case "poisonburst": let dmg=(state.enemy.poison||0)*3; state.enemy.hp-=dmg; state.enemy.poison=0; log(`💣 毒爆造成 ${dmg} 傷害，中毒清除`); break; case "percentdmg": let percentDmg=Math.floor(state.enemy.maxHp*card.percent); state.enemy.hp-=percentDmg; log(`🌑 深淵降臨造成 ${percentDmg} 傷害`); break; case "fullheal": state.hp=state.maxHp; log(`❤️ 生命已回滿`); let targetHandSize=10; while(state.hand.length<targetHandSize && (state.deck.length>0||state.discard.length>0)) draw(1); log(`🃏 抽滿手牌`); break; case "lifesteal": dealDamage(card.dmg+state.strength+state.tempStrength); heal(card.heal); log(`🩸 恢復 ${card.heal} HP`); break; case "heal": heal(card.heal); log(`❤️ 恢復 ${card.heal} HP`); break; case "atkblock": let abDmg=card.dmg+state.strength+state.tempStrength; dealDamage(abDmg); state.block+=card.block; log(`🛡️ 獲得 ${card.block} 護甲`); break; case "debuff": if(card.effect) card.effect(); break; } if(state.job==="vampire" && (card.type==="atk"||card.type==="multi") && card.type!=="lifesteal"){ let totalDamage=0; if(card.type==="atk") totalDamage=card.dmg+state.strength+state.tempStrength; if(card.type==="multi") totalDamage=(card.dmg+state.strength+state.tempStrength)*card.hits; let healAmount=Math.floor(totalDamage*(state.vampireHealRatio+(state.vampireHealBonus||0))); heal(healAmount); log(`🩸 吸血鬼被動：吸血 ${healAmount}`); } state.discard.push(card); if(state.enemy && state.enemy.hp<=0){ victory(); return; } render(); }
 function endTurn(){ if(!state.enemy) return; while(state.hand.length) state.discard.push(state.hand.pop()); state.tempStrength=0; if(state.job==="ranger") state.rangerFirstAttackFree=false; enemyTurn(); }
 function enemyTurn(){ if(!state.enemy) return; if(state.enemy.poison>0){ state.enemy.hp-=state.enemy.poison; log(`☠️ 敵人中毒 ${state.enemy.poison}`); state.enemy.poison--; if(state.enemy.hp<=0){ victory(); return; } } if(state.enemy.rank==="boss" && state.enemy.hp<state.enemy.maxHp*0.5 && !state.enemy.rage){ state.enemy.rage=true; state.enemy.atk+=8; log("🔥 Boss 狂暴化！"); } let dmg=state.enemy.atk; if(state.enemy.nextTurnAtkMod){ dmg=Math.floor(dmg*state.enemy.nextTurnAtkMod); delete state.enemy.nextTurnAtkMod; log("🌀 陷阱效果：敵人攻擊力減半"); } if(state.enemy.vulnerable>0) state.enemy.vulnerable--; dmg=Math.max(0,dmg-state.block); state.hp-=dmg; log(`👾 敵人造成 ${dmg} 傷害`); for(let r of state.relics) if(r.effect) r.effect("hit",dmg); if(state.hp<=0){ die(); return; } startTurn(); }
-function victory(){ state.inBattle=false; let rewardGold=25+state.floor*5; if(state.enemy.rank==="elite") rewardGold*=2; if(state.enemy.rank==="boss") rewardGold*=4; state.gold+=rewardGold; log(`🏆 勝利！獲得 ${rewardGold} 魂石`); showCardReward(); if(state.enemy.rank==="boss" && state.floor>=30){ state.evolutionPoints++; log(`🌟 獲得進化點數！可用於職業進化（目前 ${state.evolutionPoints} 點）`); } state.enemy=null; state.floor++; generateMap(); render(); }
-function showCardReward(){ let modal=document.getElementById("rewardModal"); let area=document.getElementById("rewardCards"); area.innerHTML=""; let rewards=[]; let pool=getNormalCards(); for(let i=0;i<3;i++) rewards.push(copyCard(pool[Math.floor(Math.random()*pool.length)])); rewards.forEach(card=>{ let div=document.createElement("div"); div.className=`card ${card.rarity}`; div.setAttribute("title",getCardTooltip(card)); div.innerHTML=cardHtml(card); div.onclick=()=>{ state.deck.push(card); log(`🎴 獲得卡牌：${card.name}`); modal.style.display="none"; render(); }; area.appendChild(div); }); modal.style.display="flex"; }
+function victory(){
+    // 🎵 【音效觸發】播放戰鬥勝利音樂
+    if (typeof AudioManager !== 'undefined') AudioManager.playBGM('victory');
+
+    state.inBattle = false;
+    let rewardGold = 25 + state.floor * 5;
+    if(state.enemy.rank === "elite") rewardGold *= 2;
+    if(state.enemy.rank === "boss") rewardGold *= 4;
+    state.gold += rewardGold;
+    
+    // 📜 於主日誌印出華麗的勝利訊息
+    log(`<b style="color:#facc15; font-size:1.1rem;">✨ ⚔️ 【 戰 鬥 勝 利 】 ⚔️ ✨</b>`);
+    log(`🏆 順利擊敗強敵，獲得 ${rewardGold} 魂石！`);
+    
+    if(state.enemy.rank === "boss" && state.floor >= 30){
+        state.evolutionPoints++;
+        log(`🌟 獲得進化點數！可用於職業進化（目前 ${state.evolutionPoints} 點）`);
+    }
+    
+    state.enemy = null;
+    state.floor++;
+    generateMap();
+    render();
+
+    // ====================================================
+    // 🎯 【新功能】動態在螢幕正中央建立大大的 VICTORY 字樣
+    // ====================================================
+    const victoryEffect = document.createElement("div");
+    victoryEffect.innerText = "VICTORY";
+    
+    // 設定華麗的純 JavaScript 特效樣式（免動 CSS 檔案）
+    victoryEffect.style.position = "fixed";
+    victoryEffect.style.top = "45%";
+    victoryEffect.style.left = "50%";
+    victoryEffect.style.transform = "translate(-50%, -50%) scale(0.3)"; // 從小變大
+    victoryEffect.style.color = "#facc15"; // 傳說級金色
+    victoryEffect.style.fontSize = "5.5rem";
+    victoryEffect.style.fontWeight = "900";
+    victoryEffect.style.letterSpacing = "10px";
+    victoryEffect.style.textShadow = "0 0 25px rgba(250, 204, 21, 0.7), 0 0 50px rgba(0, 0, 0, 0.9)";
+    victoryEffect.style.zIndex = "99999"; // 確保蓋在最上層
+    victoryEffect.style.opacity = "0";
+    victoryEffect.style.pointerEvents = "none"; // 點擊穿透，不干擾操作
+    victoryEffect.style.transition = "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)"; // 彈性跳出動畫
+    
+    document.body.appendChild(victoryEffect);
+
+    // 延遲微秒觸發「跳出並淡入」動畫
+    setTimeout(() => {
+        victoryEffect.style.opacity = "1";
+        victoryEffect.style.transform = "translate(-50%, -50%) scale(1)";
+    }, 30);
+
+    // ====================================================
+    // ⏳ 讓 VICTORY 字樣停留 1.5 秒後淡出，並隨後「給玩家選牌卡」
+    // ====================================================
+    setTimeout(() => {
+        // 字樣逐漸放大並淡出
+        victoryEffect.style.opacity = "0";
+        victoryEffect.style.transform = "translate(-50%, -50%) scale(1.2)";
+        
+        // 動畫結束後徹底移除該標籤
+        setTimeout(() => { victoryEffect.remove(); }, 400);
+        
+        // 🎁 字樣消失後，正式彈出選牌視窗！
+        showCardReward();
+    }, 1500); 
+}
+function showCardReward(){
+    let modal=document.getElementById("rewardModal");
+    let area=document.getElementById("rewardCards");
+    area.innerHTML="";
+    let rewards=[];
+    let pool=getNormalCards();
+    for(let i=0;i<3;i++) rewards.push(copyCard(pool[Math.floor(Math.random()*pool.length)]));
+    rewards.forEach(card=>{
+        let div=document.createElement("div");
+        div.className=`card ${card.rarity}`;
+        div.setAttribute("title",getCardTooltip(card));
+        div.innerHTML=cardHtml(card);
+        div.onclick=()=>{
+            state.deck.push(card);
+            log(`🎴 獲得卡牌：${card.name}`);
+            modal.style.display="none";
+            
+            // 🎵 【音效觸發】選完獎勵卡、關閉彈窗重回地圖時，切換回探索主音樂
+            if (typeof AudioManager !== 'undefined') AudioManager.playBGM('menu');
+            
+            render();
+        };
+        area.appendChild(div);
+    });
+    modal.style.display="flex";
+}
 function cardHtml(card){ return `<div class="energy">${card.cost}</div><div><div style="font-size:18px;font-weight:bold">${card.name}</div><div class="small">${rarityText(card.rarity)}</div></div><div><div style="margin-top:10px">${card.desc}</div></div>`; }
 function rarityText(r){ if(r==="common") return "普通"; if(r==="rare") return "稀有"; if(r==="epic") return "史詩"; if(r==="legend") return "傳說"; return ""; }
 function getCardTooltip(card){ let lines=[`${card.name} (${rarityText(card.rarity)})`,`費用: ${card.cost}`]; if(card.dmg) lines.push(`傷害: ${card.dmg}`); if(card.block) lines.push(`護甲: ${card.block}`); if(card.heal) lines.push(`治療: ${card.heal}`); if(card.hits) lines.push(`攻擊次數: ${card.hits}`); if(card.poison) lines.push(`中毒: ${card.poison}`); if(card.strength) lines.push(`力量: ${card.strength}`); if(card.gain) lines.push(`獲得能量: ${card.gain}`); if(card.draw) lines.push(`抽牌: ${card.draw}`); lines.push(card.desc); return lines.join("\n"); }
-function die(){ log("💀 你死亡了"); state.floor=1; state.gold=60; state.gameStarted=false; setJob(state.job); state.blackMarketCards=null; state.shopCards=null; }
+function die(){
+    log("💀 你死亡了");
+    state.floor=1;
+    state.gold=60;
+    state.gameStarted=false;
+    setJob(state.job);
+    state.blackMarketCards=null;
+    state.shopCards=null;
+
+    // 🎵 【音效觸發】死亡結算回起點時，也切換回主選單音樂
+    if (typeof AudioManager !== 'undefined') AudioManager.playBGM('menu');
+}
 // ================= 商店機制 =================
 function generateShopCards(){
     let allAvailable = [...getNormalCards(), ...getUnlockedCardObjects()];
@@ -450,3 +661,41 @@ function render(){
     let unlockBtn = document.getElementById("unlockEquipmentBtn"); if(state.floor >= 100 && !state.equipmentUnlocked){ unlockBtn.style.display = "inline-block"; } else { unlockBtn.style.display = "none"; }
     let equipStatusDiv = document.getElementById("equipStatus"); if(state.equipmentUnlocked){ let weaponR = state.equipment.weapon ? RARITY_NAME[state.equipment.weapon.rarity] : "無"; let armorR = state.equipment.armor ? RARITY_NAME[state.equipment.armor.rarity] : "無"; let pantsR = state.equipment.pants ? RARITY_NAME[state.equipment.pants.rarity] : "無"; let bootsR = state.equipment.boots ? RARITY_NAME[state.equipment.boots.rarity] : "無"; equipStatusDiv.innerHTML = `✨ 裝備稀有度：武器 ${weaponR} / 衣服 ${armorR} / 褲子 ${pantsR} / 鞋子 ${bootsR}`; } else { equipStatusDiv.innerHTML = "🔒 裝備未解鎖 (100層+5000石) · 解鎖後可購買並用魂石提升稀有度"; } }
 window.addEventListener("load",()=>{ wheelCanvas=document.getElementById("wheelCanvas"); if(wheelCanvas) wheelCtx=wheelCanvas.getContext("2d"); const spinBtn=document.getElementById("wheelSpinBtn"); if(spinBtn) spinBtn.onclick=startWheel; setJob("warrior"); render(); log("🌌 深淵符文啟動"); });
+// ==========================================
+// 🚀 極簡開場畫面控制器
+// ==========================================
+
+/**
+ * 點擊唯一的「開始遊戲」按鈕
+ */
+function handleStartGame() {
+    const startScreen = document.getElementById("start-screen");
+    if (startScreen) {
+        startScreen.classList.add("hidden"); // 淡出並隱藏開始畫面，露出下方的遊戲本體
+    }
+    
+    // 🎵 藉由玩家這次的點擊，完美解鎖瀏覽器限制並播放音樂
+    if (typeof AudioManager !== 'undefined' && !AudioManager.bgm) {
+        AudioManager.playBGM('menu');
+    }
+    
+    // 在主日誌中印出歡迎語
+    logMessage("🌌 虛空之門已開啟，冒險正式開始！", "#2dff7a");
+}
+
+// ==========================================
+// 核心載入監聽器 (完全保留你原本的所有初始化邏輯)
+// ==========================================
+window.addEventListener("load", () => { 
+    // 1. 初始化大轉盤 Canvas
+    wheelCanvas = document.getElementById("wheelCanvas"); 
+    if (wheelCanvas) wheelCtx = wheelCanvas.getContext("2d"); 
+    const spinBtn = document.getElementById("wheelSpinBtn"); 
+    if (spinBtn) spinBtn.onclick = startWheel; 
+    
+    // 2. 預設初始職業並渲染主遊戲畫面
+    setJob("warrior"); 
+    render(); 
+    
+    console.log("遊戲核心載入完畢，極簡開始畫面就緒。");
+});
