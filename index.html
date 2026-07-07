@@ -9,6 +9,7 @@
 <title>深淵符文 | 神裝覺醒</title>
 
 <link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
 <div id="start-screen" class="minimal-menu-overlay">
@@ -21,6 +22,7 @@
 <div class="panel">
 <h2>🧍 英雄</h2>
 <button id="equipmentBtn" class="btn" onclick="openEquipmentModal()">⚔️ 裝備管理</button>
+<button class="btn" style="background: #4a2c6d; border-color: #9b5de5; margin-top: 8px;" onclick="openP2PModal()">⚔️ 跨時空聯機競技場</button>
 <div id="equipStatus" class="equip-summary">🔒 裝備未解鎖 (100層+5000石)</div>
 <button id="unlockEquipmentBtn" class="btn" style="background:#aa6633; display:none;" onclick="unlockEquipment()">🔓 解鎖裝備 (5000石)</button>
 <div class="stat">❤️ HP：<span id="hp"></span>/<span id="maxHp"></span></div>
@@ -91,6 +93,78 @@
 <div class="modal" id="collectionModal"><div class="modal-content"><h2>📖 卡牌圖鑑</h2><p class="small">抽卡池收集狀態（抽到後解鎖）</p><div id="collectionGrid" class="collection-grid"></div><button class="btn" onclick="closeCollectionModal()">關閉</button></div></div>
 <div class="modal" id="wheelModal"><div class="modal-content"><h2>🎡 幸運轉盤</h2><p class="small">花費 60 魂石，指針停止處即為獲得的卡牌（直接加入牌組）</p><div class="wheel-container"><canvas id="wheelCanvas" width="500" height="500"></canvas><div class="pointer"></div><div class="wheel-center"></div></div><button id="wheelSpinBtn" class="wheel-button">開始旋轉</button><div id="wheelResultText" class="result-text"></div><button class="btn" onclick="closeWheelModal()" style="margin-top:20px;">關閉</button></div></div>
 <div class="modal" id="equipmentModal"><div class="modal-content" style="width:650px;"><h2>⚔️ 裝備管理・稀有度升級</h2><div id="equipmentSlots"></div><button class="btn" onclick="closeEquipmentModal()">關閉</button></div></div>
+
+
+<!-- ⚔️ P2P 獨立全螢幕競技場畫面 -->
+<div id="p2pModal" class="p2p-fullscreen-arena" style="display:none;">
+    <div class="arena-wrapper">
+        <div class="arena-header">
+            <h1>⚔️ 跨時空聯機競技場</h1>
+            <p>Peer-to-Peer Realtime Arena</p>
+        </div>
+        
+        <!-- 【區域 A】連線與大廳設定區 (開戰後會自動隱藏) -->
+        <div id="p2p-setup-zone" class="arena-setup-panel">
+            <div class="setup-row">
+                <button class="btn host-btn" onclick="initP2PHost()">1. 創建房間 (成為房東)</button>
+                <div class="id-display-box">
+                    <span id="my-peer-id" class="selectable-id"></span>
+                </div>
+                <button class="btn copy-btn" onclick="copyPeerID()">📋 複製聯機碼</button>
+            </div>
+            <div class="setup-row">
+                <input type="text" id="peer-target-id" placeholder="請輸入對方的房間聯機碼..." class="arena-input">
+                <button class="btn join-btn" onclick="connectToPeer()">2. 跨越虛空加入對戰</button>
+            </div>
+            <div id="p2p-status" class="arena-status-text">目前狀態：等待裂縫開啟...</div>
+        </div>
+
+<!-- 【區域 B】史詩級戰鬥主面板 -->
+<div id="p2p-battle-zone" class="arena-battle-board" style="display: none;">
+    <div class="fighter-container">
+        <!-- 我方 -->
+        <div class="fighter-card my-side">
+            <div class="fighter-tag">YOU</div>
+            <div class="fighter-job" id="p2p-my-job">-</div>
+            <div class="hp-bar-outer"><div id="my-hp-bar" class="hp-bar-inner" style="width:100%;"></div></div>
+            <div class="fighter-hp">HP: <span id="p2p-my-hp">500</span></div>
+            <div class="fighter-status">🛡️ 護甲: <span id="p2p-my-block">0</span> &nbsp; ☠️ 中毒: <span id="p2p-my-poison">0</span></div>
+        </div>
+        <div class="vs-sign">VS</div>
+        <!-- 對手 -->
+        <div class="fighter-card enemy-side">
+            <div class="fighter-tag">ENEMY</div>
+            <div class="fighter-job" id="p2p-enemy-job">-</div>
+            <div class="hp-bar-outer"><div id="enemy-hp-bar" class="hp-bar-inner" style="width:100%;"></div></div>
+            <div class="fighter-hp">HP: <span id="p2p-enemy-hp">500</span></div>
+            <div class="fighter-status">🛡️ 護甲: <span id="p2p-enemy-block">0</span> &nbsp; ☠️ 中毒: <span id="p2p-enemy-poison">0</span></div>
+        </div>
+    </div>
+
+    <!-- 回合提示 -->
+    <div id="p2p-turn-indicator" class="arena-turn-banner">等待對手連線...</div>
+
+    <!-- 手牌區域（僅在自己的回合顯示） -->
+    <div id="p2p-hand-area" style="margin: 16px 0;">
+        <div id="p2p-hand" class="p2p-hand"></div>
+        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 12px;">
+            <button id="p2p-btn-confirm" class="btn" onclick="confirmP2PPlay()" disabled style="background:#2dff7a; color:#000;">⚔️ 確認出牌 (已選 0/3)</button>
+            <button id="p2p-btn-skip" class="btn" onclick="skipP2PTurn()" style="background:#555;">⏭️ 跳過回合</button>
+        </div>
+    </div>
+
+    <!-- 對手持牌（只顯示已選數量） -->
+    <div id="p2p-enemy-hand-info" style="text-align:center; color:#aaa; font-size:14px; margin-bottom:10px;"></div>
+</div>
+        <!-- 【區域 C】下方：日誌與退出 -->
+        <div class="arena-footer">
+            <div id="p2p-log" class="arena-live-log">
+                [系統] 虛空競技場已就緒。
+            </div>
+            <button class="btn quit-btn" onclick="closeP2PModal()">放棄對決 · 關閉退出</button>
+        </div>
+    </div>
+</div>
 
 <script src="script.js"></script>
 </body>
