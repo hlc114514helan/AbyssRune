@@ -119,11 +119,10 @@ h2, h3 {
   0 8px 20px rgba(0,0,0,.45);
 }
 .card:hover {
-  transform:
-  translateY(-10px)
-  rotate(-1deg);
-
-  filter: brightness(1.1);
+    transform: translateY(-15px) rotate(-1deg) scale(1.05);
+    filter: brightness(1.15);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+    z-index: 100;
 }
 .card.common {
   border-color: #9ca3af;
@@ -191,6 +190,39 @@ h2, h3 {
 
   box-shadow:
   0 0 12px rgba(120,180,255,.5);
+}
+.enemy {
+    background: linear-gradient(180deg, #2a1111, #120707);
+    border: 2px solid #a94444;
+    padding: 24px;
+    border-radius: 20px;
+    margin-top: 14px;
+    position: relative;
+    box-shadow: 0 0 30px rgba(255,0,0,.15);
+    text-align: center;
+}
+
+/* ✅ 加入怪物角色圖示（CSS 繪製） */
+.enemy::before {
+    content: "👹";
+    font-size: 64px;
+    display: block;
+    margin-bottom: 8px;
+    animation: enemyFloat 2s ease-in-out infinite;
+}
+
+@keyframes enemyFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+/* Boss 特殊圖示 */
+.enemy .boss {
+    color: #ffb347;
+}
+.enemy .boss::before {
+    content: "🐉";
+    font-size: 80px;
 }
 .enemy {
   background:
@@ -550,7 +582,13 @@ canvas {
   background: transparent;
   border-radius: 16px;
   padding: 12px;
-  margin-a
+  margin-top: 16px;
+}
+body::before{
+  content:"";
+
+  position:fixed;
+  inset:0;
 
   background:
   radial-gradient(
@@ -753,4 +791,55 @@ canvas {
     font-size: 12px;
     color: #ccc;
     margin-top: 4px;
+}
+/* ==================== 完美格擋 QTE 樣式 ==================== */
+#parry-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+#parry-overlay.hidden { display: none; }
+
+.parry-nodes {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.parry-node {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #2a2a3a;
+  border: 3px solid #ffcc00;
+  color: #fff;
+  font-size: 22px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.2s;
+}
+
+.parry-node:hover { transform: scale(1.1); }
+.parry-node.selected { background: #ffaa00; border-color: #fff; }
+.parry-node.correct { background: #00ff66; border-color: #fff; box-shadow: 0 0 15px #00ff66; }
+.parry-node.wrong { background: #ff3333; border-color: #fff; }
+
+#parry-timer-bar {
+  width: 300px;
+  height: 10px;
+  background: #444;
+  margin-top: 15px;
+  border-radius: 5px;
+  overflow: hidden;
+}
+#parry-timer-fill {
+  width: 100%;
+  height: 100%;
+  background: #ff4444;
 }
