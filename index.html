@@ -11,6 +11,14 @@
 <link rel="stylesheet" href="style.css">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
+<!-- 完美格擋 QTE 彈窗 UI -->
+  <div id="parry-overlay" class="hidden">
+    <h2 style="color: #ffcc00; margin: 0; font-size: 24px;">⚡ 預判格擋！選 2 個點 ⚡</h2>
+    <div id="parry-timer-bar"><div id="parry-timer-fill"></div></div>
+    <div class="parry-nodes" id="parry-nodes-container"></div>
+  </div>
+
+</body>
 <body>
 <div id="start-screen" class="minimal-menu-overlay">
     <button class="minimal-start-btn" onclick="handleStartGame()">開始遊戲</button>
@@ -21,8 +29,10 @@
 <div class="wrap">
 <div class="panel">
 <h2>🧍 英雄</h2>
-<button id="equipmentBtn" class="btn" onclick="openEquipmentModal()">⚔️ 裝備管理</button>
+<button class="btn" onclick="goToStockGame()" style="background: #2d7a4a; border-color: #4ecdc4; margin-top: 8px;">📈 深淵股市</button>
 <button class="btn" style="background: #4a2c6d; border-color: #9b5de5; margin-top: 8px;" onclick="openP2PModal()">⚔️ 跨時空聯機競技場</button>
+<button id="equipmentBtn" class="btn" onclick="openEquipmentModal()">⚔️ 裝備管理</button>
+
 <div id="equipStatus" class="equip-summary">🔒 裝備未解鎖 (100層+5000石)</div>
 <button id="unlockEquipmentBtn" class="btn" style="background:#aa6633; display:none;" onclick="unlockEquipment()">🔓 解鎖裝備 (5000石)</button>
 <div class="stat">❤️ HP：<span id="hp"></span>/<span id="maxHp"></span></div>
@@ -89,7 +99,7 @@
 <div class="modal" id="blackMarketModal"><div class="modal-content"><h2>💰 奸商（三倍價格）</h2><p class="small">戰鬥中也可購買，購買後立即刷新商品</p><div>魂石：<span id="blackGold"></span></div><div id="blackCards" class="shop-grid"></div><button class="btn" onclick="closeBlackMarket()">關閉</button></div></div>
 <div class="modal" id="rewardModal"><div class="modal-content"><h2>🎁 選擇一張卡牌</h2><div id="rewardCards" class="reward-grid"></div></div></div>
 <div class="modal" id="deckModal"><div class="modal-content"><h2>📚 牌組</h2><div id="deckView" class="reward-grid"></div><button class="btn" onclick="closeDeckView()">關閉</button></div></div>
-<div class="modal" id="drawModal"><div class="modal-content"><h2>✨ 抽卡系統</h2><p>魂石：<span id="drawGold"></span></p><p class="small">抽卡會解鎖一張全新卡牌，解鎖後將出現在商店（與一般商品混合），可無限購買</p><div style="display:flex; gap:12px; margin:16px 0; align-items:center;"><div><button class="btn" onclick="drawSingle()">單抽 100 石</button><button class="btn" onclick="drawTen()">十連抽 980 石</button></div><button class="btn" onclick="openCollectionModal()">📖 圖鑑</button></div><div id="drawResultArea" class="reward-grid"></div><button class="btn" onclick="closeDrawModal()">關閉</button></div></div>
+<div class="modal" id="drawModal"><div class="modal-content"><h2>✨ 抽卡</h2><p>魂石：<span id="drawGold"></span></p><p class="small">抽卡會解鎖一張全新卡牌，解鎖後將出現在商店（與一般商品混合），可無限購買</p><div style="display:flex; gap:12px; margin:16px 0; align-items:center;"><div><button class="btn" onclick="drawSingle()">單抽 100 石</button><button class="btn" onclick="drawTen()">十連抽 980 石</button></div><button class="btn" onclick="openCollectionModal()">📖 圖鑑</button></div><div id="drawResultArea" class="reward-grid"></div><button class="btn" onclick="closeDrawModal()">關閉</button></div></div>
 <div class="modal" id="collectionModal"><div class="modal-content"><h2>📖 卡牌圖鑑</h2><p class="small">抽卡池收集狀態（抽到後解鎖）</p><div id="collectionGrid" class="collection-grid"></div><button class="btn" onclick="closeCollectionModal()">關閉</button></div></div>
 <div class="modal" id="wheelModal"><div class="modal-content"><h2>🎡 幸運轉盤</h2><p class="small">花費 60 魂石，指針停止處即為獲得的卡牌（直接加入牌組）</p><div class="wheel-container"><canvas id="wheelCanvas" width="500" height="500"></canvas><div class="pointer"></div><div class="wheel-center"></div></div><button id="wheelSpinBtn" class="wheel-button">開始旋轉</button><div id="wheelResultText" class="result-text"></div><button class="btn" onclick="closeWheelModal()" style="margin-top:20px;">關閉</button></div></div>
 <div class="modal" id="equipmentModal"><div class="modal-content" style="width:650px;"><h2>⚔️ 裝備管理・稀有度升級</h2><div id="equipmentSlots"></div><button class="btn" onclick="closeEquipmentModal()">關閉</button></div></div>
