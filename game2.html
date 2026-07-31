@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📈 深淵股市 · 深淵同步版</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="game2-style.css">
+</head>
+<body>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="app">
+
+        <!-- 頭部 -->
+        <div class="header">
+            <h1>📈 深淵<span>股市</span></h1>
+            <div class="header-actions">
+                <button class="back-btn" onclick="goBack()">⬅ 返回深淵</button>
+            </div>
+        </div>
+
+        <!-- 資產面板 -->
+        <div class="assets" id="assetsPanel">
+            <div class="asset-card">
+                <div class="label">💰 可用魂石</div>
+                <div class="value gold" id="cashDisplay">0</div>
+            </div>
+            <div class="asset-card">
+                <div class="label">📊 持股市值</div>
+                <div class="value" id="marketValue">0</div>
+            </div>
+            <div class="asset-card">
+                <div class="label">🏦 總資產</div>
+                <div class="value gold" id="totalAssets">0</div>
+            </div>
+            <div class="asset-card">
+                <div class="label">📈 總盈虧</div>
+                <div class="value" id="totalPnL">+0</div>
+            </div>
+        </div>
+
+        <!-- 股票列表 -->
+        <div class="stock-table">
+            <div class="stock-row header-row">
+                <span>股票</span>
+                <span>現價</span>
+                <span>漲跌幅</span>
+                <span>持倉</span>
+                <span>成本價</span>
+                <span>浮動盈虧</span>
+                <span>數量</span>
+                <span>操作</span>
+            </div>
+            <div id="stockList"></div>
+        </div>
+
+        <!-- 底部 -->
+        <div class="bottom-row">
+            <div class="log-box" id="logBox">
+                <div class="log-title">📋 交易記錄</div>
+                <div id="logEntries">
+                    <div class="log-entry" style="color:#6a5a4a;">暫無交易</div>
+                </div>
+            </div>
+            <div class="holdings-summary">
+                <div class="h-title">📦 持倉明細</div>
+                <div id="holdingsList">
+                    <div class="empty-hint">尚未持有股票</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="game2-script.js"></script>
+</body>
+</html>
